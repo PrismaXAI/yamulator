@@ -1,0 +1,10 @@
+# One job per line: <name> <run_policy_sim.py args>. launch_jobs.sh adds --episodes/--vary 1/--duration/--out.
+# A small appearance + camera sweep of one checkpoint on paired scenes (same scene seeds in every job):
+white_ae150     --ckpt ckpt/my_ckpt --auto-exposure 150 --torch-seed 0
+wood_dark_ae150 --ckpt ckpt/my_ckpt --auto-exposure 150 --torch-seed 0 --table wood --wall-albedo 0.08
+disk10_ae150    --ckpt ckpt/my_ckpt --auto-exposure 150 --torch-seed 0 --light-shape disk --light-radius 0.05
+tilt_m10        --ckpt ckpt/my_ckpt --auto-exposure 150 --torch-seed 0 --cam-jitter 0 --cam-tilt -10
+arm_up_2cm      --ckpt ckpt/my_ckpt --auto-exposure 150 --torch-seed 0 --arm-height 0.02
+# Large samples: shard a condition over GPUs with fresh scenes, then: python tools/compare_sharded.py BIG
+BIG_white_s0    --ckpt ckpt/my_ckpt --auto-exposure 150 --episode-start 0
+BIG_white_s1    --ckpt ckpt/my_ckpt --auto-exposure 150 --episode-start 30

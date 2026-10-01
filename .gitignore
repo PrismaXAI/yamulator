@@ -1,0 +1,16 @@
+# build output and fetched third-party headers (NVIDIA licence: not redistributed here)
+build/
+third_party/
+# environments
+.venv/
+.venv-policy/
+__pycache__/
+*.pyc
+# outputs
+runs/
+renders/
+# local, rig- or dataset-specific files
+sag_table.json
+ckpt/
+assets/backdrops/*
+!assets/backdrops/README.md

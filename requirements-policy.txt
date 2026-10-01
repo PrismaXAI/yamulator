@@ -1,0 +1,9 @@
+# Policy-in-the-loop (run_policy_sim.py, policy_probe.py, tools/rescore_contacts.py): the simulator deps + the
+# pi0.5 inference stack. The checkpoints were validated with exactly the versions in constraints.txt
+# (torch 2.10.0 / CUDA 12.8 wheels, lerobot 0.5.1, transformers 5.3.0, Python 3.12):
+#   uv venv --python 3.12 .venv-policy && uv pip install --python .venv-policy/bin/python -r requirements-policy.txt -c constraints.txt
+-r requirements.txt
+torch==2.10.0
+torchvision==0.25.0
+lerobot[pi]==0.5.1
+transformers==5.3.0
