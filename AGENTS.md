@@ -167,7 +167,8 @@ select checkpoints by rollouts.
 
 ### With the prism-pi policy server
 
-`--server` uses a running `policy_server.py` from the `prism-pi` repository instead of loading the model here
+`--server` uses a running policy server from the `prism-pi` repository (`python -m prism_pi.policy.server`
+there) instead of loading the model here
 (model stays in VRAM between runs, bf16 weights at about 8 GiB, optional TensorRT engines). Both repositories use
 the same socket (`/tmp/prism-pi-policy-<uid>.sock`, override with `YAM_POLICY_SOCK`), so nothing needs
 configuring. `--rtc` (real-time chunking) requires `--server` and `--latency-ticks > 0`. While the server holds
@@ -204,7 +205,7 @@ in the overhead image. Minimal API:
 | `render_test.py`, `grasp_demo.py`, `render_episode.py` | smoke tests, offline video re-render |
 | `tools/` | result tables, grasp-quality and offset statistics, `make_ckpt_shim.py` |
 | `launch_jobs.sh`, `examples/` | multi-GPU batch launcher and a jobs file |
-| `arm_arbiter.py`, `sag_comp.py`, `relative_actions_compat.py`, `policy_client.py`, `yamsim/kinematics.py`, `yamsim/tool_offset.py`, `assets/yam/yam.urdf`, `tools/make_ckpt_shim.py`, `constraints.txt` | shared with `prism-pi`: the same files exist there and must stay identical, because the real executor and the simulator are meant to run the same control code. When you change one, change the copy and say so. |
+| `arm_arbiter.py`, `sag_comp.py`, `relative_actions_compat.py`, `policy_client.py`, `yamsim/kinematics.py`, `yamsim/tool_offset.py`, `tools/make_ckpt_shim.py`, `constraints.txt` | executor-side code the simulator runs in the loop. `prism-pi` carries the same code under `prism_pi/control/` and `prism_pi/policy/` (the copies differ only in imports and file locations). A change to the logic of one belongs in both, so that what the simulator validates is what the real executor runs; say so when you make one. |
 
 Not tracked (see `.gitignore`): `build/`, `third_party/`, `.venv*/`, `runs/`, `renders/`, `ckpt/`,
 `sag_table.json`, anything in `assets/backdrops/`.

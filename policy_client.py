@@ -1,4 +1,4 @@
-"""Client for policy_server.py. RemoteRunner mirrors the executor's Pi05Runner.infer() interface, so the control code
+"""Client for the prism-pi policy server (prism_pi.policy.server). RemoteRunner mirrors the executor's Pi05Runner.infer() interface, so the control code
 does not care whether the model is local or served. No torch import needed on the client side."""
 import os
 from multiprocessing.connection import Client

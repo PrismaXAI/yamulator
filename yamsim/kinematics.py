@@ -130,7 +130,7 @@ class GripperCalibration:
 
 # Gripper motor conventions. The LeRobot training data stores the gripper in the leader/teleop
 # radian convention (closed ~6.35, open ~1.45); the physical followers on our station were
-# calibrated (GRIP_CAL in prism-pi's dryrun_inference.py) to closed ~0.01 / open ~-5.09 rad.
+# calibrated (GRIP_CAL in prism-pi's prism_pi/rig/hardware.py) to closed ~0.01 / open ~-5.09 rad.
 # i2rt's linear_4310.yml: motor_stroke 6.57 rad <-> gripper_stroke 0.096 m (linear).
 TRAIN_GRIPPER_CAL = {"left": GripperCalibration(6.351, 1.45), "right": GripperCalibration(6.392, 1.34)}
 STATION_GRIPPER_CAL = {"left": GripperCalibration(0.011, -5.094), "right": GripperCalibration(0.060, -5.041)}

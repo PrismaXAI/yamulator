@@ -558,7 +558,7 @@ def main():
                     "while the previous chunk keeps executing for those D ticks (real rig: 7-8). 0 = instantaneous inference (historical sim behaviour)")
     ap.add_argument("--rtc", action="store_true", help="real-time chunking through the policy server (needs --server and --latency-ticks > 0)")
     ap.add_argument("--rtc-horizon", type=int, default=20)
-    ap.add_argument("--server", action="store_true", help="use the persistent policy server (policy_server.py of the prism-pi repo) instead of loading the model here; "
+    ap.add_argument("--server", action="store_true", help="use the persistent policy server (prism_pi.policy.server of the prism-pi repo) instead of loading the model here; "
                     "the server must hold (or will hot-swap to) --ckpt. Per-episode --torch-seed is forwarded, so results match local runs")
     ap.add_argument("--out", default=None)
     ap.add_argument("--seed", type=int, default=0, help="path-tracer sample seed (+ episode index); render noise only")
