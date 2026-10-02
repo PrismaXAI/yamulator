@@ -1,4 +1,4 @@
-# One job per line: <name> <run_policy_sim.py args>. launch_jobs.sh adds --episodes/--vary 1/--duration/--out.
+# One job per line: <name> <yamulator.run_policy_sim args>. launch_jobs.sh adds --episodes/--vary 1/--duration/--out.
 # A small appearance + camera sweep of one checkpoint on paired scenes (same scene seeds in every job):
 white_ae150     --ckpt ckpt/my_ckpt --auto-exposure 150 --torch-seed 0
 wood_dark_ae150 --ckpt ckpt/my_ckpt --auto-exposure 150 --torch-seed 0 --table wood --wall-albedo 0.08

@@ -23,7 +23,9 @@ from dataclasses import dataclass, field
 import mujoco
 import numpy as np
 
-_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from yamulator.paths import ROOT
+
+_ROOT = str(ROOT)
 ARM_XML = os.path.join(_ROOT, "assets", "yam", "yam.xml")
 GRIPPER_XML = os.path.join(_ROOT, "assets", "yam", "gripper", "linear_4310.xml")
 

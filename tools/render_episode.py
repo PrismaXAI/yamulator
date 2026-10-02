@@ -1,13 +1,13 @@
 """Re-render an episode's video from its state log (run.npz + summary.json), no policy or physics needed.
-Usage: .venv/bin/python render_episode.py runs/<set>/<name>/epNN [--every 2] [--spp 24] [--width 640]
+Usage: .venv/bin/python tools/render_episode.py runs/<set>/<name>/epNN [--every 2] [--spp 24] [--width 640]
 Reproduces the scene (variation, appearance, camera perturbation) and poses arms/apple from the per-tick log."""
 import argparse, json, os, sys
 import numpy as np
 from PIL import Image, ImageDraw
 
-HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
-from yamsim.scene import YamStation, StationConfig, OverheadCamera, WristCamera, tf
-from yamsim.renderer import tonemap
+sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parent.parent))
+from yamulator.sim.scene import YamStation, StationConfig, OverheadCamera, WristCamera, tf
+from yamulator.sim.renderer import tonemap
 from scipy.spatial.transform import Rotation as Rot
 
 ap = argparse.ArgumentParser(); ap.add_argument("ep_dir"); ap.add_argument("--every", type=int, default=2); ap.add_argument("--spp", type=int, default=24)

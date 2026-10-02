@@ -7,10 +7,10 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-_HERE = os.path.dirname(os.path.abspath(__file__))
-_ROOT = os.path.dirname(_HERE)
-LIB_PATH = os.path.join(_ROOT, "build", "libyamtrace.so")
-DEVICE_PROGRAM = os.path.join(_ROOT, "build", "device.ptx")
+from yamulator.paths import BUILD
+
+LIB_PATH = str(BUILD / "libyamtrace.so")
+DEVICE_PROGRAM = str(BUILD / "device.ptx")
 
 MAT_LAMBERT = 1
 MAT_TWO_SIDED = 2

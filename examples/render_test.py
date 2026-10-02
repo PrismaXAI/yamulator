@@ -4,11 +4,12 @@ import os, sys, time
 import numpy as np
 from PIL import Image
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from yamsim.scene import YamStation, StationConfig, OverheadCamera, LookAtCamera
-from yamsim.kinematics import solve_ik, top_down_grasp_frame
+sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parent.parent))
+from yamulator.paths import RENDERS
+from yamulator.sim.scene import YamStation, StationConfig, OverheadCamera, LookAtCamera
+from yamulator.sim.kinematics import solve_ik, top_down_grasp_frame
 
-out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "renders")
+out = str(RENDERS)
 os.makedirs(out, exist_ok=True)
 spp = int(sys.argv[1]) if len(sys.argv) > 1 else 512
 

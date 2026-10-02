@@ -10,13 +10,16 @@ A simulator of a bimanual [I2RT YAM](https://github.com/i2rt-robotics/i2rt) stat
 
 - `native/`: an OptiX path tracer (Disney BRDF, area lights with NEE + MIS, glass, denoiser, motion blur) that
   renders the three policy cameras (overhead + two wrist cameras) at 640x400.
-- `yamsim/`: the Python package: URDF kinematics, scene (`YamStation`), materials, the i2rt motor law on the
+- `yamulator/sim/`: URDF kinematics, scene (`YamStation`), materials, the i2rt motor law on the
   MuJoCo arm model (`dynamics.py`), a physical gripper/fruit contact world (`mjworld.py`, `contact_sim.py`).
-- `run_policy_sim.py`: runs a checkpoint in the loop (pick an apple from a plate, place it in a container) with
+- `yamulator/run_policy_sim.py`: runs a checkpoint in the loop (pick an apple from a plate, place it in a container) with
   the same control scheme as the real-rig executor in the companion repo `prism-pi`, and logs every tick.
 
 It is sim only. Nothing here talks to a robot; `run_policy_sim.py` asserts at start and end that no hardware
-module (`i2rt`, `can`, executor code) got imported. Keep it that way.
+module (`i2rt`, `can`, `prism_pi`) got imported. Keep it that way.
+
+Modules are run as `python -m yamulator.<...>` and scripts as `python tools/<...>.py` from the repository root
+(no install step).
 
 ## What you need from the user before starting
 
@@ -54,8 +57,8 @@ redistribution inside an open-source repository, which is why they are fetched a
 
 ### 3. Verify without a policy
 
-    .venv/bin/python render_test.py 64      # 5 test renders -> renders/*.png, about 0.3 s per frame
-    .venv/bin/python grasp_demo.py 32       # scripted pick through the contact model -> renders/grasp_demo/
+    .venv/bin/python examples/render_test.py 64      # 5 test renders -> renders/*.png, about 0.3 s per frame
+    .venv/bin/python examples/grasp_demo.py 32       # scripted pick through the contact model -> renders/grasp_demo/
 
 Expected: `scene built in ...: 46 instances`, three lines `rest / hover / grasp` with `lum mean` around 130 cd/m2,
 and for the demo `success=True` with events `between_pads`, `grasp`, `lift`, `release`. Open
@@ -96,7 +99,7 @@ Add `--follower` if the checkpoint was trained on follower positions as actions 
 
 ### 7. First policy rollout
 
-    HF_HUB_OFFLINE=1 .venv-policy/bin/python run_policy_sim.py --ckpt ckpt/my_ckpt \
+    HF_HUB_OFFLINE=1 .venv-policy/bin/python -m yamulator.run_policy_sim --ckpt ckpt/my_ckpt \
         --task "<task string, verbatim from the training data>" \
         --episodes 2 --vary 1 --duration 12 --auto-exposure 150 --torch-seed 0 --out runs/smoke
 
@@ -105,7 +108,7 @@ takes about 6 s on an RTX 5090, about 30 s on a card without RT cores), then the
 With a fixed `--torch-seed` the run is reproducible bit for bit on the same machine and software. Add
 `--video-every 2` to get `rollout.mp4` (three cameras side by side), or render it afterwards:
 
-    .venv/bin/python render_episode.py runs/smoke/ep001 --every 2 --spp 24
+    .venv/bin/python tools/render_episode.py runs/smoke/ep001 --every 2 --spp 24
 
 ## Checkpoint conventions the code assumes
 
@@ -116,18 +119,18 @@ matching constants changed, not just a different `--ckpt`:
 |---|---|---|
 | policy | LeRobot `pi05`, chunk of 50 actions at 30 Hz | `Pi05Runner`, `CHUNK`, `CTRL_HZ` in `run_policy_sim.py` |
 | images | `observation.images.{high,left_wrist,right_wrist}`, 640x400 RGB (16:10 sensor, downscaled) | `Pi05Runner.infer`; the checkpoint's own rename step maps them to the model's names |
-| state (14) | `[L pan, lift, elbow, wr1, wr2, wr3, gripper, R ...]`, arm joints in rad (i2rt), gripper = raw motor rad of the data rig (closed about 6.35, open about 1.45) | `SimArms.state14`, `TRAIN_GRIPPER_CAL` in `yamsim/kinematics.py` |
-| action (14) | same order; arm joints absolute rad (or deltas from the chunk-start state when `use_relative_actions` is set in `config.json`), gripper 0 = open .. 1 = closed | `split()` in `run_episode`; relative actions via `relative_actions_compat.py` |
+| state (14) | `[L pan, lift, elbow, wr1, wr2, wr3, gripper, R ...]`, arm joints in rad (i2rt), gripper = raw motor rad of the data rig (closed about 6.35, open about 1.45) | `SimArms.state14`, `TRAIN_GRIPPER_CAL` in `sim/kinematics.py` |
+| action (14) | same order; arm joints absolute rad (or deltas from the chunk-start state when `use_relative_actions` is set in `config.json`), gripper 0 = open .. 1 = closed | `split()` in `run_episode`; relative actions via `policy/relative_actions_compat.py` |
 | start pose | both arms at `[0, 0, 0, -0.08, 0, 0]`, grippers open | `REST_POSE` |
 | action envelope | normalizer stats of the checkpoint +-0.10 rad (state stats for relative-action checkpoints) | `main()` |
-| leader vs follower actions | `--sag-comp auto` adds the data rig's follower-sag table to leader-action checkpoints if `sag_table.json` exists; never for a `FOLLOWER_ACTIONS` marker or "follower" in `train_config.json` | `sag_comp.py`, `sag_table.example.json` |
+| leader vs follower actions | `--sag-comp auto` adds the data rig's follower-sag table to leader-action checkpoints if `config/sag_table.json` exists; never for a `FOLLOWER_ACTIONS` marker or "follower" in `train_config.json` | `control/sag_comp.py`, `config/sag_table.example.json` |
 
 The sag table is a property of the rig the training data was recorded on (its follower arms sagged below the
-leader command). It is not installed by default; without `sag_table.json` no compensation is applied.
+leader command). It is not installed by default; without `config/sag_table.json` no compensation is applied.
 
 ## Running evaluations
 
-`run_policy_sim.py -h` lists every option. The ones that define a comparable experiment:
+`python -m yamulator.run_policy_sim -h` lists every option. The ones that define a comparable experiment:
 
 - `--episodes N --vary 1`: N scenes with seeded variation (apple within 6 cm of the plate centre, plate +-3 cm,
   camera +-2 cm / +-2 deg, exposure +-20 %). The scene seed is `1000 + episode index`, so every checkpoint and
@@ -143,7 +146,7 @@ leader command). It is not installed by default; without `sag_table.json` no com
   `--arm-height`, `--arm-spacing`, `--base-pitch-deg`, `--cam-dx/dy/dz/tilt/yaw/roll/fov`, `--wrist-*`,
   `--cam-distortion`, `--plate-*`, `--apple-diameter`, `--n-apples`, `--exposure-ev`, `--exposure-ms` (motion blur).
 - Executor emulation: `--latency-ticks 8` (inference latency as on the rig), `--arbitrate` (one arm at a time
-  in the shared zone, `arm_arbiter.py`), `--joint-offset-vec-deg` (encoder-offset hypothesis),
+  in the shared zone, `control/arm_arbiter.py`), `--joint-offset-vec-deg` (encoder-offset hypothesis),
   `--preclose-advance-mm`, `--grip-assist`, `--max-arm-step`.
 
 Outputs per episode (`<out>/epNNN/`): `summary.json` (success = lifted > 5 cm, `placed_in`, grasp times,
@@ -180,7 +183,7 @@ Do not run sim batches through the server while it is serving a live robot sessi
 The defaults model our station: arms 0.61 m apart with bases level with the work surface, plate 0.38 m ahead,
 overhead camera on the base line 0.6 m up and 45 deg down (`--cam-tilt -10` reproduces our dataset's framing),
 105 deg diagonal lenses. For another rig, measure and set the flags above, or edit `StationConfig`,
-`OverheadCamera` and `WristCamera` in `yamsim/scene.py`. Things that mattered most in our ablations: arm base
+`OverheadCamera` and `WristCamera` in `yamulator/sim/scene.py`. Things that mattered most in our ablations: arm base
 height relative to the work surface (2 cm costs success, 5 cm breaks the policy), an overhead lens wider than the
 training lens, wrist-camera position to a few millimetres, small hard light sources. Scene colours and textures
 did not matter once exposure matched.
@@ -188,7 +191,7 @@ did not matter once exposure matched.
 World frame: z up, origin on the work surface midway between the arm bases, arms face +y, +x is to the right
 in the overhead image. Minimal API:
 
-    from yamsim.scene import YamStation, StationConfig, OverheadCamera, WristCamera
+    from yamulator.sim.scene import YamStation, StationConfig, OverheadCamera, WristCamera
     st = YamStation(StationConfig())                 # builds the scene on the GPU
     st.set_arm_state(left7, right7)                  # [q1..q6 rad, gripper rad] per arm
     st.set_camera(WristCamera("left"))
@@ -199,16 +202,24 @@ in the overhead image. Minimal API:
 | path | purpose |
 |---|---|
 | `native/` | OptiX device program (`device.cu`), C API (`yamtrace.cpp`), `build.sh` |
-| `yamsim/` | `kinematics.py`, `renderer.py` (ctypes), `materials.py`, `scene.py`, `dynamics.py`, `mjworld.py`, `contact_sim.py`, `physics.py` (kinematic contact, legacy), `tool_offset.py` |
+| `yamulator/sim/` | `kinematics.py`, `renderer.py` (ctypes), `materials.py`, `scene.py`, `dynamics.py`, `mjworld.py`, `contact_sim.py`, `physics.py` (kinematic contact, legacy) |
+| `yamulator/run_policy_sim.py` | the closed-loop runner |
+| `yamulator/control/` | executor-side command shaping run in the loop: `arm_arbiter.py`, `tool_offset.py`, `sag_comp.py` |
+| `yamulator/policy/` | `client.py` (prism-pi policy server client), `relative_actions_compat.py` |
+| `yamulator/paths.py` | every file location (assets, build output, config, outputs) in one place |
 | `assets/` | YAM URDF/MJCF + meshes (from the i2rt SDK), apple and wood textures (Poly Haven, CC0); see `THIRD_PARTY.md` |
-| `run_policy_sim.py`, `policy_probe.py` | closed-loop runner; single-observation probe for cross-machine checks |
-| `render_test.py`, `grasp_demo.py`, `render_episode.py` | smoke tests, offline video re-render |
-| `tools/` | result tables, grasp-quality and offset statistics, `make_ckpt_shim.py` |
-| `launch_jobs.sh`, `examples/` | multi-GPU batch launcher and a jobs file |
-| `arm_arbiter.py`, `sag_comp.py`, `relative_actions_compat.py`, `policy_client.py`, `yamsim/kinematics.py`, `yamsim/tool_offset.py`, `tools/make_ckpt_shim.py`, `constraints.txt` | executor-side code the simulator runs in the loop. `prism-pi` carries the same code under `prism_pi/control/` and `prism_pi/policy/` (the copies differ only in imports and file locations). A change to the logic of one belongs in both, so that what the simulator validates is what the real executor runs; say so when you make one. |
+| `config/` | `sag_table.example.json`; your `sag_table.json` lives next to it |
+| `examples/` | `render_test.py`, `grasp_demo.py` (smoke tests without a policy), `jobs_example.txt` |
+| `tools/` | result tables (`compare_*.py`), `grasp_quality.py`, offset and crowding statistics, `rescore_contacts.py`, `render_episode.py` (offline video), `policy_probe.py` (single-observation probe for cross-machine checks), `make_ckpt_shim.py` |
+| `launch_jobs.sh` | multi-GPU batch launcher |
+
+Counterparts in `prism-pi`: `yamulator/control/` and `yamulator/policy/` (plus `sim/kinematics.py`,
+`tools/make_ckpt_shim.py`, `constraints.txt`) carry the same logic as `prism_pi/control/` and `prism_pi/policy/`
+there; the copies differ only in imports and file locations. A change to the logic of one belongs in both, so that
+what the simulator validates is what the real executor runs; say so when you make one.
 
 Not tracked (see `.gitignore`): `build/`, `third_party/`, `.venv*/`, `runs/`, `renders/`, `ckpt/`,
-`sag_table.json`, anything in `assets/backdrops/`.
+`config/*.json` other than the example, anything in `assets/backdrops/`.
 
 ## Troubleshooting
 
@@ -219,8 +230,8 @@ Not tracked (see `.gitignore`): `build/`, `third_party/`, `.venv*/`, `runs/`, `r
 - **PTX compile fails with an unsupported `-arch`**: set `PTX_ARCH` to what your `nvcc` supports and the GPU can
   run (never above the GPU's capability).
 - **`PI05Policy.from_pretrained` rejects a config key**: make a shim (step 6).
-- **Loading fails on an unknown processor step `relative_actions_processor`**: `relative_actions_compat.py` was
-  not imported; it registers that step name. `run_policy_sim.py` imports it; your own scripts must too.
+- **Loading fails on an unknown processor step `relative_actions_processor`**: `yamulator.policy.relative_actions_compat`
+  was not imported; it registers that step name. `run_policy_sim.py` imports it; your own scripts must too.
 - **CUDA out of memory at load**: another process holds the model (a policy server, a second runner). One fp32
   model is about 15.5 GiB.
 - **Policy reaches but closes beside the fruit, or hedges**: check, in this order, the tokenizer (`[2, ...]`),
@@ -230,7 +241,7 @@ Not tracked (see `.gitignore`): `build/`, `third_party/`, `.venv*/`, `runs/`, `r
 
 ## Rules for agents working here
 
-- Never add imports of `i2rt`, `can` or executor code to this repository.
+- Never add imports of `i2rt`, `can` or `prism_pi` to this repository.
 - Long runs: launch detached, poll the `aggregate.json` files, and never edit a shell script while it is running.
 - When killing by pattern, use patterns that cannot match your own shell (`pgrep -f "run_policy_si[m]"`), or
   kill by PID.

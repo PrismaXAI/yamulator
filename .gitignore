@@ -10,7 +10,8 @@ __pycache__/
 runs/
 renders/
 # local, rig- or dataset-specific files
-sag_table.json
+config/*.json
+!config/*.example.json
 ckpt/
 assets/backdrops/*
 !assets/backdrops/README.md

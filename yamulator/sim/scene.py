@@ -17,7 +17,9 @@ from . import materials as M
 from .kinematics import GripperCalibration, TRAIN_GRIPPER_CAL, YamArm, rpy_to_matrix
 from .renderer import MAT_LAMBERT, MAT_TWO_SIDED, Material, RectLight, Renderer, tonemap
 
-_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+from yamulator.paths import ROOT
+
+_ROOT = str(ROOT)
 YAM_URDF = os.path.join(_ROOT, "assets", "yam", "yam.urdf")
 WRIST_CAM_STL = os.path.join(_ROOT, "assets", "yam", "assets", "d405_wrist_linear_4310.stl")
 APPLE_GLTF = os.path.join(_ROOT, "assets", "apple", "food_apple_01_1k.gltf")

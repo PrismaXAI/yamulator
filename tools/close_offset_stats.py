@@ -5,8 +5,8 @@ Usage: python close_offset_stats.py <run_dir> [<run_dir> ...]"""
 import sys, json, numpy as np
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from yamsim.kinematics import YamArm, GripperCalibration
-from yamsim.scene import tf
+from yamulator.sim.kinematics import YamArm, GripperCalibration
+from yamulator.sim.scene import tf
 URDF = str(Path(__file__).resolve().parent.parent / "assets/yam/yam.urdf")
 arms = {s: YamArm(URDF, GripperCalibration(6.351, 1.45), base_tf=tf(xyz=(x, 0, 0), rpy=(0, 0, np.pi / 2))) for s, x in (("left", -0.305), ("right", 0.305))}
 def pad(side, q6):

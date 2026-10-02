@@ -14,8 +14,8 @@ import glob, json, os, sys
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from yamsim.scene import YamStation, StationConfig, tf
-from yamsim.physics import AppleGraspSim
+from yamulator.sim.scene import YamStation, StationConfig, tf
+from yamulator.sim.physics import AppleGraspSim
 
 PAD_Z = (-0.147, -0.120)
 PAD_FACE_OFFSET = 0.004
@@ -47,7 +47,7 @@ def split(a14):
 
 class Replayer:
     def __init__(self, dynamics="mujoco", plate_xy=(0.0, 0.38)):
-        from run_policy_sim import SimArms, REST_POSE
+        from yamulator.run_policy_sim import SimArms, REST_POSE
         self.REST = REST_POSE
         self.st = YamStation(StationConfig(plate_xy=tuple(plate_xy)), log_level=0)
         self.sim = AppleGraspSim(self.st)

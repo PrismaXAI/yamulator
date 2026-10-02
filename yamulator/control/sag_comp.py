@@ -9,16 +9,15 @@ current shoulder-lift state. Validated 2026-09-13: compensated ep2900 replay put
 the fruit at the dataset grasp onset.
 
 The offsets are a property of the rig the TRAINING DATA was recorded on, so the table is not shipped as a default:
-copy sag_table.example.json (the table measured for our dataset) to sag_table.json, or write your own (median
-state - action per shoulder-lift bin, per arm). Without sag_table.json the compensation is unavailable and
+copy config/sag_table.example.json (the table measured for our dataset) to config/sag_table.json, or write your own
+(median state - action per shoulder-lift bin, per arm). Without it the compensation is unavailable and
 `--sag-comp auto` runs without it.
 """
 import json
-from pathlib import Path
 
 import numpy as np
 
-TABLE = Path(__file__).resolve().parent / "sag_table.json"
+from yamulator.paths import SAG_TABLE as TABLE
 
 
 def available() -> bool:
@@ -34,7 +33,7 @@ if available():
 def sag_delta6(lift_state: float, side: str = "left") -> np.ndarray:
     """6-vector [pan, lift, elbow, wr1, wr2, wr3] to ADD to the commanded arm joints."""
     if not available():
-        raise FileNotFoundError(f"{TABLE} not found: sag compensation needs a sag table (see sag_table.example.json)")
+        raise FileNotFoundError(f"{TABLE} not found: sag compensation needs a sag table (see config/sag_table.example.json)")
     d = np.array([np.interp(lift_state, _C, _D[side][:, j]) for j in range(5)])
     return np.array([0.0, d[0], d[1], d[2], d[3], d[4]])
 

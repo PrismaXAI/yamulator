@@ -23,13 +23,12 @@ How (no perception needed, only forward kinematics of both arms):
                 is blocked for `cooldown_s`, so a dithering arm cannot starve the other one.
 Pure numpy + the sim's URDF FK; imports nothing from the robot SDK.
 """
-from pathlib import Path
-
 import numpy as np
 
-from yamsim.kinematics import GripperCalibration, YamArm
+from yamulator import paths
+from yamulator.sim.kinematics import GripperCalibration, YamArm
 
-URDF = str(Path(__file__).resolve().parent / "assets/yam/yam.urdf")
+URDF = str(paths.URDF)
 REST = np.array([0.0, 0.0, 0.0, -0.08, 0.0, 0.0])
 SIDES = ("left", "right")
 OFF = {"left": 0, "right": 7}

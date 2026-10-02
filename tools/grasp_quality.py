@@ -28,7 +28,7 @@ import argparse, glob, json, os, re, sys
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from yamsim.mjworld import YamContactWorld, PAD_Z  # noqa: E402
+from yamulator.sim.mjworld import YamContactWorld, PAD_Z  # noqa: E402
 
 HZ = 30.0
 PINCH_N = 1.0          # same threshold as ContactGraspSim ("pinched")
@@ -42,7 +42,7 @@ class Reposer:
     """Static re-posing of the contact world: logged state in, pad/apple contact geometry out."""
 
     def __init__(self, arm_spacing=0.61, arm_height=0.0, base_pitch_deg=0.0, n_apples=1, apple_diameter=0.075):
-        from yamsim.mjworld import ContactConfig
+        from yamulator.sim.mjworld import ContactConfig
         self.w = YamContactWorld(arm_spacing=arm_spacing, arm_base_height=arm_height, arm_base_pitch_deg=base_pitch_deg, contact=ContactConfig(n_apples=n_apples, apple_radius=apple_diameter / 2))
         self.r = float(self.w.contact.apple_radius)
 

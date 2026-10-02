@@ -4,12 +4,13 @@ import os, sys, time
 import numpy as np
 from PIL import Image, ImageDraw
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from yamsim.scene import YamStation, OverheadCamera, WristCamera
-from yamsim.kinematics import solve_ik, top_down_grasp_frame
-from yamsim.physics import AppleGraspSim
+sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parent.parent))
+from yamulator.paths import RENDERS
+from yamulator.sim.scene import YamStation, OverheadCamera, WristCamera
+from yamulator.sim.kinematics import solve_ik, top_down_grasp_frame
+from yamulator.sim.physics import AppleGraspSim
 
-out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "renders", "grasp_demo")
+out = str(RENDERS / "grasp_demo")
 os.makedirs(out, exist_ok=True)
 spp = int(sys.argv[1]) if len(sys.argv) > 1 else 32
 

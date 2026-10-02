@@ -7,16 +7,14 @@ Observation = three 640x400 renders (high / left_wrist / right_wrist) + 14-dim s
 convention; the sim arm tracks commands with a first-order lag like the real follower (~100 ms).
 
 Usage (policy venv = requirements-policy.txt, see AGENTS.md):
-  HF_HUB_OFFLINE=1 .venv-policy/bin/python run_policy_sim.py --ckpt <checkpoint dir> --duration 40
+  HF_HUB_OFFLINE=1 .venv-policy/bin/python -m yamulator.run_policy_sim --ckpt <checkpoint dir> --duration 40
 """
 import argparse, dataclasses, json, os, sys, time
 from pathlib import Path
 
 import numpy as np
 
-HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE))
-FORBIDDEN = ("i2rt", "can", "dryrun_inference", "yam_executor")  # the CAN motor path; pyserial is a lerobot import, not used
+FORBIDDEN = ("i2rt", "can", "prism_pi", "dryrun_inference", "yam_executor")  # the CAN motor path and the real-rig stack; pyserial is a lerobot import, not used
 
 
 def assert_no_hardware_modules():
@@ -28,12 +26,11 @@ import torch  # noqa: E402
 from lerobot.processor import ProcessorStep, ProcessorStepRegistry  # noqa: E402
 
 
-from relative_actions_compat import RelativeActionsProcessorStep  # noqa: E402,F401  (real step under the fork's registry name)
-
-
-from yamsim.scene import YamStation, StationConfig, OverheadCamera, WristCamera  # noqa: E402
-from yamsim.physics import AppleGraspSim  # noqa: E402
-from yamsim.kinematics import TRAIN_GRIPPER_CAL  # noqa: E402
+from yamulator import paths  # noqa: E402
+from yamulator.policy.relative_actions_compat import RelativeActionsProcessorStep  # noqa: E402,F401  (real step under the fork's registry name)
+from yamulator.sim.scene import YamStation, StationConfig, OverheadCamera, WristCamera  # noqa: E402
+from yamulator.sim.physics import AppleGraspSim  # noqa: E402
+from yamulator.sim.kinematics import TRAIN_GRIPPER_CAL  # noqa: E402
 
 CTRL_HZ = 30.0
 CHUNK = 50
@@ -96,7 +93,7 @@ class SimArms:
         self.q = {"left": REST_POSE.copy(), "right": REST_POSE.copy()}   # measured arm joints
         self.g = {"left": 1.0, "right": 1.0}                              # measured/commanded open state
         if dynamics == "mujoco":
-            from yamsim.dynamics import YamArmDynamics
+            from yamulator.sim.dynamics import YamArmDynamics
             self.dyn = {"left": YamArmDynamics(), "right": YamArmDynamics()}
         self.apply(np.concatenate([REST_POSE, [1.0]]), np.concatenate([REST_POSE, [1.0]]), instant=True)
 
@@ -181,7 +178,7 @@ class Variation:
 def run_episode(args, ep: int, var: Variation, runner, st, sim, arms, cams, sag, a_lo, a_hi, out: Path):
     import imageio
     from PIL import Image, ImageDraw
-    from yamsim.scene import tf
+    from yamulator.sim.scene import tf
     out.mkdir(parents=True, exist_ok=True); (out / "frames").mkdir(exist_ok=True)
     plate_xy = np.array(args.plate_xy) + np.array(var.plate_jitter)
     st.cfg.plate_xy = tuple(plate_xy)
@@ -208,7 +205,7 @@ def run_episode(args, ep: int, var: Variation, runner, st, sim, arms, cams, sag,
     arms.reset()
     last_cmd = np.concatenate([REST_POSE, [0.0], REST_POSE, [0.0]])
 
-    from yamsim.renderer import tonemap
+    from yamulator.sim.renderer import tonemap
     from scipy.spatial.transform import Rotation as _Rot
     pose_hist = []   # (arm_state {side: 7}, object_poses {apple names: 4x4}) after every sim step, for --exposure-ms
     def record_pose():
@@ -297,7 +294,7 @@ def run_episode(args, ep: int, var: Variation, runner, st, sim, arms, cams, sag,
     tick = 0; n_inf = 0; t_success = None; prev_chunk = None
     arb = None
     if args.arbitrate:
-        from arm_arbiter import ZoneArbiter
+        from yamulator.control.arm_arbiter import ZoneArbiter
         arb = ZoneArbiter(zone_w=args.arb_zone, timeout_s=args.arb_timeout, arm_spacing=args.arm_spacing, hold_mode=args.arb_hold)
     log["arb_owner"] = []
     total_ticks = int(args.duration * CTRL_HZ)
@@ -306,13 +303,13 @@ def run_episode(args, ep: int, var: Variation, runner, st, sim, arms, cams, sag,
     obs_prev = obs_cur = 0
     arb_rejoin = {"left": False, "right": False}
     grip_hist = [last_cmd[[6, 13]].copy()] * (args.grip_delay_ticks + 1)
-    # tool-frame interventions (yamsim/tool_offset.py): constant offset and/or a one-shot advance at close onset
+    # tool-frame interventions (control/tool_offset.py): constant offset and/or a one-shot advance at close onset
     tool_const = np.array(args.tool_offset_mm, float) / 1000.0
     pre_vec = np.array(args.preclose_advance_mm, float) / 1000.0
     pre_len = float(np.linalg.norm(pre_vec)); pre_dir = pre_vec / pre_len if pre_len > 0 else np.zeros(3)
     shifter = pre = None
     if np.any(tool_const != 0) or pre_len > 0:
-        from yamsim.tool_offset import ToolShifter, PreCloseAdvance
+        from yamulator.control.tool_offset import ToolShifter, PreCloseAdvance
         shifter = ToolShifter(args.arm_spacing, args.arm_height, args.base_pitch_deg)
         pre = PreCloseAdvance(pre_len, args.preclose_ticks, relative=bool(getattr(args, "is_relative", True))) if pre_len > 0 else None
     log["tool_shift_mm"] = []; shift_fail = {"left": 0, "right": 0}
@@ -512,8 +509,8 @@ def main():
     ap.add_argument("--apple-offset", type=float, nargs=2, default=[0.0, 0.0], help="apple offset from the plate centre (episode 0 / no --vary)")
     ap.add_argument("--force-apple-offset", action="store_true", help="with --vary: keep the per-episode scene variation (plate jitter, exposure, yaw) but pin the apple at --apple-offset from the plate centre")
     ap.add_argument("--sag-comp", choices=["auto", "on", "off"], default="auto",
-                    help="add the data rig's follower-sag offsets (sag_comp.py, needs sag_table.json) to leader-action checkpoints "
-                         "(auto: off if the checkpoint is follower-action or no sag_table.json is present)")
+                    help="add the data rig's follower-sag offsets (control/sag_comp.py, needs config/sag_table.json) to leader-action checkpoints "
+                         "(auto: off if the checkpoint is follower-action or no config/sag_table.json is present)")
     ap.add_argument("--stop-after-success", type=float, default=6.0, help="seconds to keep running after a lift")
     ap.add_argument("--wall-albedo", type=float, default=0.85, help="work-cell wall albedo (data rig black curtain ~0.15)")
     ap.add_argument("--table", choices=["white", "wood", "wood_matte"], default="white", help="work surface: white laminate, light varnished wood grain, or the same grain matte")
@@ -526,7 +523,7 @@ def main():
     ap.add_argument("--clamp", type=float, default=500.0, help="per-sample radiance clamp after a diffuse bounce (cd/m2). 500 = near-lossless (standard since 2026-09-17); 20 = historical runs (lost ~45%% of bounce light)")
     ap.add_argument("--auto-exposure", type=float, default=0.0, help="camera-style AE: scale each frame's exposure so its mean 8-bit gray hits this target (0 = fixed exposure; training frames ~150)")
     ap.add_argument("--exposure-ev", type=float, default=0.0, help="exposure error in EV applied after AE / fixed exposure (+ = over-exposed; highlights clip like a real sensor)")
-    ap.add_argument("--arbitrate", action="store_true", help="arm arbitration (arm_arbiter.py): at most one arm in the shared work zone; the other is held at rest")
+    ap.add_argument("--arbitrate", action="store_true", help="arm arbitration (control/arm_arbiter.py): at most one arm in the shared work zone; the other is held at rest")
     ap.add_argument("--arb-soft-rejoin", action="store_true", help="with --arbitrate: an arm released by the arbiter keeps the gentle 0.03 rad/tick rate until its command has caught up with the policy's plan (executor default since 2026-09-19: prevents a full-rate plunge back to the grasp pose)")
     ap.add_argument("--arb-prefer-side", action="store_true", help="arbitration perception hint: prefer the arm on the fruit's side (sim: apple x; rig: overhead red-blob centroid)")
     ap.add_argument("--arb-hold", choices=["freeze", "rest"], default="rest", help="held arm: 'rest' = return to the rest pose (zero crowding; sim: same success, first grasp +6 s); 'freeze' = stop at the zone boundary (first grasp +3 s but crowding only halved)")
@@ -570,16 +567,16 @@ def main():
     assert_no_hardware_modules()
 
     ts = time.strftime("%Y%m%d_%H%M%S")
-    out = Path(args.out) if args.out else HERE / "runs" / f"{ts}_{Path(args.ckpt).name}"
+    out = Path(args.out) if args.out else paths.RUNS / f"{ts}_{Path(args.ckpt).name}"
     out.mkdir(parents=True, exist_ok=True)
     is_follower = (Path(args.ckpt) / "FOLLOWER_ACTIONS").exists()
     try:
         is_follower |= "follower" in (Path(args.ckpt) / "train_config.json").read_text().lower()
     except OSError:
         pass
-    import sag_comp   # pure numpy + json
+    from yamulator.control import sag_comp   # pure numpy + json
     if args.sag_comp == "on" and not sag_comp.available():
-        raise SystemExit(f"--sag-comp on needs {sag_comp.TABLE} (see sag_table.example.json)")
+        raise SystemExit(f"--sag-comp on needs {sag_comp.TABLE} (see config/sag_table.example.json)")
     use_sag = args.sag_comp == "on" or (args.sag_comp == "auto" and not is_follower and sag_comp.available())
     if use_sag:
         sag = sag_comp.compensate14
@@ -603,8 +600,8 @@ def main():
                         **({"light_positions": tuple(zip(args.light_xy[0::2], args.light_xy[1::2]))} if args.light_xy else {}))
     st = YamStation(cfg, log_level=1)
     if args.dynamics == "mujoco_contact":
-        from yamsim.contact_sim import ContactGraspSim
-        from yamsim.mjworld import ContactConfig
+        from yamulator.sim.contact_sim import ContactGraspSim
+        from yamulator.sim.mjworld import ContactConfig
         sim = ContactGraspSim(st, contact=ContactConfig(plate_rim_height=args.plate_rim, rolling=args.rolling, n_apples=args.n_apples, apple_radius=args.apple_diameter / 2), plate=not args.no_plate, plate_raise=args.plate_raise)
     else:
         sim = AppleGraspSim(st)
@@ -612,7 +609,7 @@ def main():
     cams = {"high": OverheadCamera(), "left_wrist": WristCamera("left"), "right_wrist": WristCamera("right")}
     assert_no_hardware_modules()
     if args.server:
-        from policy_client import RemoteRunner   # no torch model in this process; never imports hardware modules
+        from yamulator.policy.client import RemoteRunner   # no torch model in this process; never imports hardware modules
 
         class _ServedRunner:
             """Pi05Runner-compatible facade over the policy server; seed_next seeds the server's RNG once (episode start)."""

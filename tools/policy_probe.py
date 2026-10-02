@@ -1,9 +1,9 @@
 """Single-step policy probe: same observation (3 saved frames + rest state), N seeds -> chunk statistics.
-Run on two machines and compare. Usage: python policy_probe.py <ckpt> <frames_dir/prefix> [dtype] [n]"""
+Run on two machines and compare. Usage: python tools/policy_probe.py <ckpt> <frames_dir/prefix> [dtype] [n]"""
 import sys, json, numpy as np, torch
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from run_policy_sim import Pi05Runner, assert_no_hardware_modules
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from yamulator.run_policy_sim import Pi05Runner, assert_no_hardware_modules
 from PIL import Image
 ckpt, prefix = sys.argv[1], sys.argv[2]; dtype = sys.argv[3] if len(sys.argv) > 3 else "bf16"; n = int(sys.argv[4]) if len(sys.argv) > 4 else 16
 frames = {k: np.asarray(Image.open(f"{prefix}_{k}.jpg").convert("RGB")) for k in ("high", "left_wrist", "right_wrist")}

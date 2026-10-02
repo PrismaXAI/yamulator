@@ -75,7 +75,7 @@ def shutdown():
         c.close()
 
 
-if __name__ == "__main__":  # tiny control CLI:  policy_client.py info | load <ckpt> [dtype] | shutdown
+if __name__ == "__main__":  # tiny control CLI:  python -m yamulator.policy.client info | load <ckpt> [dtype] | shutdown
     import sys
     cmd = sys.argv[1] if len(sys.argv) > 1 else "info"
     if cmd == "info":
@@ -89,4 +89,4 @@ if __name__ == "__main__":  # tiny control CLI:  policy_client.py info | load <c
         except EOFError:
             print("server stopped")
     else:
-        raise SystemExit("usage: policy_client.py info | load <ckpt> [dtype] | shutdown")
+        raise SystemExit("usage: python -m yamulator.policy.client info | load <ckpt> [dtype] | shutdown")

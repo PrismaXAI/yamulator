@@ -3,7 +3,7 @@ both occupy the shared zone over the plate. Usage: python crowding_stats.py <run
 import sys, json, glob, numpy as np
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from arm_arbiter import ZoneArbiter
+from yamulator.control.arm_arbiter import ZoneArbiter
 arb = ZoneArbiter()
 def pad(side, q6):
     P = arb.arms[side].link_poses(np.r_[q6, 1.45])["gripper"]; return (P @ np.array([0, 0, -0.134, 1.0]))[:3]

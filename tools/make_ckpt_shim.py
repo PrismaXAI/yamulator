@@ -10,7 +10,7 @@ copied). Pass the shim directory wherever a --ckpt is expected.
 Keys to drop are detected from the installed lerobot (anything PI05Config has no field for); without lerobot in the
 interpreter only `pretrained_revision` and the --drop-key names are dropped.
 --follower writes a FOLLOWER_ACTIONS marker: the checkpoint's actions are achievable follower positions, so the
-data-rig sag compensation (sag_comp.py) must never be applied to it. Checkpoints whose train_config.json mentions
+data-rig sag compensation must never be applied to it. Checkpoints whose train_config.json mentions
 "follower" are detected without the marker.
 """
 import argparse

@@ -19,14 +19,13 @@ FK, the same arm model as arm_arbiter / the renderer); falls back to q6 if the r
 """
 from __future__ import annotations
 
-from pathlib import Path
-
 import numpy as np
 from scipy.spatial.transform import Rotation as Rot
 
-from .kinematics import GripperCalibration, YamArm, rotation_error
+from yamulator import paths
+from yamulator.sim.kinematics import GripperCalibration, YamArm, rotation_error
 
-URDF = str(Path(__file__).resolve().parent.parent / "assets/yam/yam.urdf")
+URDF = str(paths.URDF)
 OFF = {"left": 0, "right": 7}
 
 

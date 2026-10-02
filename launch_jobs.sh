@@ -1,6 +1,6 @@
 #!/bin/bash
-# Dispatch simulator jobs over several GPUs: one run_policy_sim.py per GPU at a time, from a jobs file where each line is
-#   <name> <args...>        (e.g. "white_ae150 --ckpt ckpt/my_ckpt --auto-exposure 150"; see examples/jobs_example.txt)
+# Dispatch simulator jobs over several GPUs: one yamulator.run_policy_sim per GPU at a time, from a jobs file where each line is
+#   <name> <run_policy_sim args...>        (e.g. "white_ae150 --ckpt ckpt/my_ckpt --auto-exposure 150"; see examples/jobs_example.txt)
 # Usage: ./launch_jobs.sh jobs.txt ["0 1 2 3"]     (GPU list; default: every GPU nvidia-smi reports)
 # Env:   N (episodes per job, 30), DUR (seconds per episode, 45), PYTHON (.venv-policy/bin/python), OUT (runs/batch)
 # Each job writes OUT/<name>/ (ep*/summary.json + run.npz, aggregate.json) and OUT/<name>.log. Sim only; never touches hardware.
@@ -15,7 +15,7 @@ export PYTHON OUT
 mkdir -p "$OUT"
 run_job() { gpu=$1; shift; name=$1; shift
   echo "[$(date +%H:%M)] gpu$gpu start $name: $*"
-  CUDA_VISIBLE_DEVICES=$gpu $PYTHON run_policy_sim.py --episodes ${N:-30} --vary 1 --duration ${DUR:-45} --dynamics mujoco_contact --out $OUT/$name "$@" > $OUT/$name.log 2>&1
+  CUDA_VISIBLE_DEVICES=$gpu $PYTHON -m yamulator.run_policy_sim --episodes ${N:-30} --vary 1 --duration ${DUR:-45} --dynamics mujoco_contact --out $OUT/$name "$@" > $OUT/$name.log 2>&1
   echo "[$(date +%H:%M)] gpu$gpu done  $name: $(grep -o '"success_rate": [0-9.]*' $OUT/$name.log | head -1)"
 }
 export -f run_job
